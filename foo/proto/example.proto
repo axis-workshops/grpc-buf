@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package example_package;
+
+import "proto/billing/v1alpha1/payment.proto";
+
+message ServerMessage {
+  string server_message = 1;
+  proto.billing.v1alpha1.Order order = 2;
+}
+
+message ClientMessage {
+  string client_message = 1;
+}
+
+service Example {
+  rpc unaryCall(ClientMessage) returns (ServerMessage) {}
+  rpc serverStreamingCall(ClientMessage) returns (stream ServerMessage) {}
+  rpc clientStreamingCall(stream ClientMessage) returns (ServerMessage) {}
+  rpc bidirectionalStreamingCall(stream ClientMessage) returns (stream ServerMessage) {}
+}

@@ -1,0 +1,100 @@
+import * as grpc from '@grpc/grpc-js';
+import * as protoLoader from '@grpc/proto-loader';
+import path from 'path';
+import { ProtoGrpcType } from '../proto/example';
+import { ServerMessage } from '../proto/example_package/ServerMessage';
+
+const host = '0.0.0.0:9090';
+const protoPath = path.join(__dirname, '../../protos/example.proto');
+const includeDirs = [path.join(__dirname, '../../../billing-service')];
+const packageDefinition = protoLoader.loadSync(protoPath, {
+  includeDirs
+});
+const proto = grpc.loadPackageDefinition(
+  packageDefinition
+) as unknown as ProtoGrpcType;
+
+const client = new proto.example_package.Example(
+  host,
+  grpc.credentials.createInsecure()
+);
+
+function doUnaryCall() {
+  client.unaryCall(
+    {
+      clientMessage: 'Message from client',
+    },
+    (error?: grpc.ServiceError, serverMessage?: ServerMessage) => {
+      if (error) {
+        console.error(error.message);
+      } else if (serverMessage) {
+        console.log(
+          `(client) Got server message: ${serverMessage.serverMessage}`
+        );
+      }
+    }
+  );
+}
+
+function doServerStreamingCall() {
+  const stream = client.serverStreamingCall({
+    clientMessage: 'Message from client',
+  });
+  stream.on('data', (serverMessage: ServerMessage) => {
+    console.log(`(client) Got server message: ${serverMessage.serverMessage}`);
+  });
+}
+
+function doClientStreamingCall() {
+  const stream = client.clientStreamingCall((error?: grpc.ServiceError) => {
+    if (error) {
+      console.error(error.message);
+    }
+  });
+  stream.write({
+    clientMessage: 'Message from client',
+  });
+}
+
+function doBidirectionalStreamingCall() {
+  const stream = client.bidirectionalStreamingCall();
+
+  // Server stream
+  stream.on('data', (serverMessage: ServerMessage) => {
+    console.log(`(client) Got server message: ${serverMessage.serverMessage}`);
+  });
+
+  // Client stream
+  stream.write({
+    clientMessage: 'Message from client',
+  });
+}
+
+function onClientReady() {
+  switch (process.argv[process.argv.length - 1]) {
+    case '--unary':
+      doUnaryCall();
+      break;
+    case '--server-streaming':
+      doServerStreamingCall();
+      break;
+    case '--client-streaming':
+      doClientStreamingCall();
+      break;
+    case '--bidi-streaming':
+      doBidirectionalStreamingCall();
+      break;
+    default:
+      throw new Error('Example not specified');
+  }
+}
+
+const deadline = new Date();
+deadline.setSeconds(deadline.getSeconds() + 5);
+client.waitForReady(deadline, (error?: Error) => {
+  if (error) {
+    console.log(`Client connect error: ${error.message}`);
+  } else {
+    onClientReady();
+  }
+});

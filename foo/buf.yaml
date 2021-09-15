@@ -1,0 +1,13 @@
+version: v1
+name: buf.build/axis/grpc-buf
+deps:
+  - buf.build/axis/billing-service
+lint:
+  use:
+    - DEFAULT
+breaking:
+  use:
+    - FILE
+build:
+  excludes:
+    - ./node_modules

@@ -1,0 +1,5 @@
+version: v1
+plugins:
+  - name: grpc
+    out: build/nodejs
+    path: proto-loader-gen-types
